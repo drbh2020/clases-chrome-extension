@@ -1,4 +1,4 @@
-console.log("Ejecutando el content script 2.0");
+console.log("Ejecutando el content script 6.0");
 
 function getJobInformation() {
   const elemCardJobs = [...document.querySelectorAll("[id*='jobcard-']")];
@@ -15,8 +15,8 @@ function getJobInformation() {
               { innerText: beneficios },
               {},
               {
-                children: [elementEmpresaCiudad]
-              }
+                children: [elementEmpresaCiudad],
+              },
             ],
           },
         ],
@@ -29,34 +29,41 @@ function getJobInformation() {
     return { url, fecha, title, salario, beneficios, empresa, ciudad };
   });
 
-  return jobs
+  return jobs;
+}
+
+function clickNextButton() {
+  const nextPageButton = document.querySelector("[class*=next-]");
+  nextPageButton.click();
 }
 
 //Connect to background
 const portBackground = chrome.runtime.connect({ name: "content-background" });
 
-portBackground.onMessage.addListener(async ({ message }) => {
-  if (message === "nextpage") {
-    const nextPageButton = document.querySelector("[class*=next-]")
-    nextPageButton.click()
+portBackground.postMessage({message: "online"})
+portBackground.onMessage.addListener(async ({message}) => {
+  if (message === "scrap") {
+    const jobs = getJobInformation();
+    clickNextButton();
+  }
+})
+
+portBackground.onMessage.addListener(async ({ message, status }) => {
+  if (message === "online") {
+    alert(status)
   }
 });
 
 //Connect from popup
 chrome.runtime.onConnect.addListener(function (port) {
   port.onMessage.addListener(function ({ message }) {
-    // alert(`${port.name}: ${message}`);
-    // console.log(message)
-    // if (message === "hola") port.postMessage({ message: "Como estas?" });
-
-    if (message = "getJobs") {
-      const jobs = getJobInformation()
-      port.postMessage({message: "ok", data: jobs})
-      portBackground.postMessage({ message: "finish" });
+    if ((message = "scrap")) {
+      const jobs = getJobInformation();
+      const nextPageButton = document.querySelector("[class*=next-]");
+      const message = !!nextPageButton ? "next" : "";
+      portBackground.postMessage({message});
+      // port.postMessage({message: "ok", data: jobs})
+      // portBackground.postMessage({ message: "finish" });
     }
   });
 });
-
-
-
-

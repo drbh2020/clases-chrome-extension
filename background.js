@@ -1,3 +1,5 @@
+let statusScrap = "stop";
+
 const saveObjectInLocalStorage = async function (key) {
   return new Promise((resolve, reject) => {
     try {
@@ -22,7 +24,7 @@ const getObjectInLocalStorage = async function (key) {
   });
 };
 
-chrome.runtime.onConnect.addListener(function (port) {
+/* chrome.runtime.onConnect.addListener(function (port) {
   port.onMessage.addListener(async function ({ message }) {
     if (message === "startscrap") {
       const status = "start";
@@ -33,6 +35,36 @@ chrome.runtime.onConnect.addListener(function (port) {
       // const status = await getObjectInLocalStorage("status");
       // if (status === "start") 
         port.postMessage({ message: "nextpage" });
+    }
+  });
+});
+ */
+
+chrome.runtime.onConnect.addListener(function (port) {
+  port.onMessage.addListener(async function ({ message }, {sender}) {
+    if (message === "start") {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if(!tab) return;
+      statusScrap = "start"
+
+      let port = chrome.tabs.connect(tab.id, { name: "background-content" });
+      port.postMessage({ message: "scrap"});
+      return;
+    }
+
+    if (message === "next") {
+      console.log("tabid: ", sender.tab.id);
+      console.log("url: ", sender.tab.url);
+
+      await chrome.tabs.update(sender.tab.id, {url: "https://www.occ.com.mx/empleos/en-ciudad-de-mexico/en-la-ciudad-de-alvaro-obregon/?page=1"})
+      // sendResponse({ message: "scrap"});
+      return;
+      
+    }
+
+    if (message === "online" && statusScrap === "start") {
+      port.postMessage({ message: "scrap"});
+      return;
     }
   });
 });
